@@ -2,6 +2,9 @@ import { useQuery } from "@apollo/client/react"
 import { GET_LAUNCHES } from "../../api/getDatas"
 import { HiOutlineRocketLaunch } from "react-icons/hi2";
 import { CiCalendar } from "react-icons/ci";
+import Loading from "../../component/Loading";
+import { ConfigProvider, Pagination } from "antd";
+import { useState } from "react";
 
 
 type Launch = {
@@ -16,27 +19,26 @@ type LaunchesData = {
 };
 
 const MapLaunches = () => {
-    const { loading, error, data } = useQuery<LaunchesData>(GET_LAUNCHES, {
-        variables: { limit: 35 }
+    const [page, setPage] = useState<number>(1)
+    const limit = 10
+    const { loading, error, data, fetchMore } = useQuery<LaunchesData>(GET_LAUNCHES, {
+        variables: { offset: 0, limit }
     })
     console.log(data);
 
-    // To load more on scroll
-    // const loadMore = () => {
-    //     fetchMore({
-    //         variables: { offset: data?.launchesPast.length || 0 },
-    //         updateQuery: (prev, { fetchMoreResult }) => {
-    //             if (!fetchMoreResult) return prev
+    const loadMore = (pageNo: number) => {
+        setPage(pageNo)
+        fetchMore({
+            variables: { offset: (pageNo - 1) * limit, limit },
+            updateQuery(previousQueryResult, { fetchMoreResult }) {
+                if (!fetchMoreResult) return previousQueryResult
 
-    //             return {
-    //                 launchesPast: [
-    //                     ...prev.launchesPast,
-    //                     ...fetchMoreResult.launchesPast
-    //                 ]
-    //             }
-    //         }
-    //     })
-    // }
+                return { launchesPast: fetchMoreResult.launchesPast }
+            },
+        })
+
+        console.log(pageNo)
+    }
 
 
     return (
@@ -54,7 +56,11 @@ const MapLaunches = () => {
             //     if (bottom && !loading) loadMore()
             // }}
             >
-                {loading && <p className="text-5xl text-white">Loading...</p>}
+                {loading &&
+                    <div className="w-full mx-auto flex items-center justify-center">
+                        <Loading />
+                    </div>
+                }
                 {error && <p>{error?.message}</p>}
                 {!loading && !error && data && data.launchesPast.map((each, index) => (
                     <section className="bg-[#080E21] p-3 rounded-2xl border border-[#10234F] hover:bg-[#092B43] hover:transition-all hover:duration-300" key={index}>
@@ -84,6 +90,21 @@ const MapLaunches = () => {
                     </section>
                 ))}
             </section>
+            <div className="py-6">
+                <ConfigProvider 
+                    theme={{
+                        components: {
+                            Pagination: {
+                                itemActiveBg: "#0F1A2E",
+                                itemBg: "#092D50",
+                                colorText: "white"
+                            }
+                        }
+                    }}
+                >
+                    <Pagination defaultCurrent={1} pageSize={limit} current={page} total={100} onChange={loadMore} style={{}} className="" />
+                </ConfigProvider>
+            </div>
         </main>
     )
 }
